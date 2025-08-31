@@ -14,7 +14,8 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-if config.main_section is not None:
+# --- THIS IS THE CORRECTED LINE ---
+if config.main_section_name is not None:
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
@@ -29,17 +30,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
+    """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -60,13 +51,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
-    # This is the corrected part. It uses the ASYNC engine creator.
+    """Run migrations in 'online' mode."""
     connectable = async_engine_from_config(
         config.get_section(config.main_section_name, {}),
         prefix="sqlalchemy.",
@@ -82,5 +67,4 @@ async def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    # This correctly runs the async function.
     asyncio.run(run_migrations_online())
