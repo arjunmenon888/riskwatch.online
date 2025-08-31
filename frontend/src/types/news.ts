@@ -1,5 +1,3 @@
-import { type UserRole } from '../context/AuthContext';
-
 export interface Post {
   id: number;
   title: string;
