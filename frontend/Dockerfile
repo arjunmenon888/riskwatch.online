@@ -34,4 +34,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 # Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+CMD sh -c "sed -i \"s|BACKEND_ORIGIN_PLACEHOLDER|${BACKEND_ORIGIN}|g\" /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
