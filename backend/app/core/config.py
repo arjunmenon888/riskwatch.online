@@ -1,5 +1,6 @@
-# app/core/config.py
+# filepath: app/core/config.py
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from dotenv import load_dotenv
 import os
 
@@ -17,13 +18,24 @@ class Settings(BaseSettings):
     
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     PEXELS_API_KEY: str = os.getenv("PEXELS_API_KEY", "")
-
-    # --- NEW R2 SETTINGS ---
+    
     R2_ACCOUNT_ID: str = ""
     R2_ACCESS_KEY_ID: str = ""
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET_NAME: str = ""
     R2_PUBLIC_URL: str = ""
+
+    @model_validator(mode='after')
+    def fix_database_url(self) -> 'Settings':
+        """
+        Ensures the database URL uses the correct 'psycopg' driver scheme
+        for async operations with psycopg3.
+        """
+        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgresql://"):
+            self.DATABASE_URL = self.DATABASE_URL.replace(
+                "postgresql://", "postgresql+psycopg://", 1
+            )
+        return self
 
     class Config:
         env_file = ".env"
