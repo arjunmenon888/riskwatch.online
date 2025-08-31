@@ -4,9 +4,9 @@
 set -e
 
 # --- THIS IS THE FIX ---
-# Add the current directory to Python's module search path.
-# This allows Alembic and other scripts to find the 'app' package.
-export PYTHONPATH=.
+# Change directory to the app's root where alembic.ini is located.
+cd /app
+# The PYTHONPATH is now set in the Dockerfile, so we don't need it here.
 # --- END FIX ---
 
 # Wait for the database to be ready
