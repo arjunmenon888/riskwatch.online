@@ -23,7 +23,7 @@ const HomePage: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await apiClient.get<Post[]>('/posts');
+      const response = await apiClient.get<Post[]>('/posts/');
       setPosts(response.data || []);
     } catch (err) {
       setError('Failed to load the news feed.');
