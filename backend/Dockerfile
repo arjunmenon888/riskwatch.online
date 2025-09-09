@@ -22,4 +22,4 @@ COPY . .
 
 # Run Alembic migrations, then start FastAPI
 # Now that we're in /app/backend, 'main:app' is importable and 'from app...' works
-CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT}
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}

@@ -2,7 +2,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
-from app.auth.routes import router as auth_router
+try:
+    from app.auth.routes import router as auth_router
+except Exception:
+    auth_router = None 
 from app.core.config import settings # <-- ADD THIS IMPORT
 
 app = FastAPI(title="RiskWatch API")
