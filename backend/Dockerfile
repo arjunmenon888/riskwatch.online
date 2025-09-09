@@ -2,24 +2,24 @@
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PORT=8000
 
-WORKDIR /app/backend
+# Railway builds with root = backend/, so backend files are the build context
+WORKDIR /app
 
-# system deps (for psycopg/asyncpg builds, etc.)
+# System deps (for psycopg/asyncpg, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# install python deps
-COPY backend/requirements.txt /app/backend/requirements.txt
+# Install Python deps
+# Make sure requirements.txt is in backend/ (same folder as this Dockerfile)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# copy the backend code
-COPY backend/ /app/backend/
+# Copy the backend source
+COPY . .
 
-# default port; Railway also sets $PORT
-ENV PORT=8000
-
-# run DB migrations, then start API
+# Run Alembic migrations, then start FastAPI
 CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT}
