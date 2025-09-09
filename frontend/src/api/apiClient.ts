@@ -1,7 +1,7 @@
 // frontend/src/api/apiClient.ts
 import axios from "axios";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, ""); // strip trailing slash
+const BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "");
 
 const apiClient = axios.create({
   baseURL: BASE_URL,                    // e.g. https://<backend>.up.railway.app/api/v1
