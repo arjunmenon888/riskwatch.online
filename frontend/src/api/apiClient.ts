@@ -1,27 +1,27 @@
-// filepath: frontend/src/api/apiClient.ts
-import axios from 'axios';
+// frontend/src/api/apiClient.ts
+import axios from "axios";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, ""); // strip trailing slash
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: BASE_URL,                    // e.g. https://<backend>.up.railway.app/api/v1
+  timeout: 15000,
+  // withCredentials: true,             // ONLY if you use cookie-based auth
 });
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken"); // <-- keep this key consistent
     if (token) {
+      config.headers = config.headers ?? {};
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// IMPORTANT: A full production-ready app would have response interceptors
-// here to handle 401 Unauthorized errors by attempting to refresh the
-// token using the refresh_token. This involves more complex logic like
-// request queueing to avoid race conditions. For this boilerplate,
-// we'll keep it simple and assume the user logs out and back in.
+// (Optional) handle 401 to sign-out or refresh later
+// apiClient.interceptors.response.use(undefined, async (error) => { ... });
 
 export default apiClient;
