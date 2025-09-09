@@ -1,109 +1,104 @@
-# filepath: backend/alembic/env.py
-import asyncio
 import os
+import sys
+import importlib
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
 
-# ---------------------------------------------------------------------------
-# Alembic Config
-# ---------------------------------------------------------------------------
+# --- Make project root importable (/app) ---
+THIS_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.join(THIS_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# Optional: load .env at project root
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
+except Exception:
+    pass
+
 config = context.config
 
-# Interpret the config file for Python logging.
-# This sets up loggers basically.
+# Logging
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Import your application's metadata here so 'autogenerate' works.
-# Make sure app.db.base imports/aggregates all your models.
-from app.db.base import Base  # noqa: E402
+# --- DB URL from environment ---
+db_url = os.getenv("DATABASE_URL")
+if not db_url:
+    raise RuntimeError("DATABASE_URL is not set in the environment for Alembic.")
+config.set_main_option("sqlalchemy.url", db_url)
 
-target_metadata = Base.metadata
+# --- Find your Base.metadata for autogenerate ---
+_TARGET_IMPORT_CANDIDATES = [
+    ("app.models", "Base"),
+    ("app.db.base", "Base"),
+    ("app.database", "Base"),
+    ("app.db.models", "Base"),
+    ("app.core.models", "Base"),
+    ("models", "Base"),
+    ("database", "Base"),
+]
 
+target_metadata = None
+errors = []
+for module_name, attr in _TARGET_IMPORT_CANDIDATES:
+    try:
+        mod = importlib.import_module(module_name)
+        Base = getattr(mod, attr)
+        target_metadata = Base.metadata
+        break
+    except Exception as e:
+        errors.append(f"{module_name}.{attr}: {type(e).__name__}: {e}")
 
-def _coerce_async_driver(url: str | None) -> str | None:
-    """
-    Ensure the URL uses the async driver for PostgreSQL.
-    Railway often provides DATABASE_URL like 'postgresql://...'
-    but async engine requires 'postgresql+asyncpg://...'
-    """
-    if not url:
-        return url
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    # If already async (postgresql+asyncpg://), leave it.
-    return url
+if target_metadata is None:
+    tried = "\n  - ".join(errors)
+    raise ImportError(
+        "Alembic couldn't locate your SQLAlchemy Base.metadata.\n"
+        "Update the import list in alembic/env.py to point to your actual Base.\n"
+        "Tried:\n  - " + tried
+    )
 
-
+# --- Offline runner (no DB connection) ---
 def run_migrations_offline() -> None:
-    """
-    Run migrations in 'offline' mode.
-    This configures the context with just a URL and not an Engine,
-    though an Engine is acceptable here as well.
-    """
-    # Prefer env var if present, else ini option.
-    url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
-    url = _coerce_async_driver(url)
-
-    # In offline mode we still pass a (possibly async) URL string.
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,
-        compare_server_default=True,
+        dialect_opts={"paramstyle": "named"},
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
-
-def _configure_context_with_connection(connection):
-    """
-    Helper to configure Alembic with a live connection.
-    """
+# --- Online runner (async engine, sync migration body) ---
+def do_run_migrations(connection) -> None:
+    """This runs in a sync context passed by connection.run_sync()."""
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
         compare_type=True,
-        compare_server_default=True,
     )
-
-
-def do_run_migrations(connection):
-    _configure_context_with_connection(connection)
     with context.begin_transaction():
         context.run_migrations()
 
-
 async def run_migrations_online() -> None:
-    """
-    Run migrations in 'online' mode using an ASYNC engine.
-    """
-    # Get the [alembic] section dict correctly for async_engine_from_config
-    section = config.get_section(config.config_ini_section) or {}
-
-    # Work out the final URL (env var wins) and coerce to async driver if needed
-    url = os.environ.get("DATABASE_URL") or section.get("sqlalchemy.url") or config.get_main_option("sqlalchemy.url")
-    url = _coerce_async_driver(url)
-    section["sqlalchemy.url"] = url
-
     connectable = async_engine_from_config(
-        section,
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-
     async with connectable.connect() as connection:
+        # IMPORTANT: run the sync body via run_sync to avoid MissingGreenlet
         await connection.run_sync(do_run_migrations)
-
     await connectable.dispose()
-
 
 if context.is_offline_mode():
     run_migrations_offline()
 else:
+    import asyncio
     asyncio.run(run_migrations_online())

@@ -1,3 +1,4 @@
+# filepath: backend/app/models/user.py
 import enum
 from sqlalchemy import Column, Integer, String, Boolean, Enum as SAEnum, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship, declarative_base
@@ -37,8 +38,13 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
-    # --- NEW RELATIONSHIP ---
     posts = relationship("Post", back_populates="author", cascade="all, delete-orphan")
+
+    # --- ADDED FOR TRAINING MODULE ---
+    created_trainings = relationship("Training", back_populates="author", cascade="all, delete-orphan")
+
+     # --- ADD THIS LINE FOR PROGRESS TRACKING ---
+    lesson_completions = relationship("UserLessonCompletion", back_populates="user", cascade="all, delete-orphan")
 
 
 class Invitation(Base):
@@ -53,7 +59,7 @@ class Invitation(Base):
     
     created_by = relationship("User", back_populates="invitations")
 
-# --- NEW MODEL ---
+
 class Post(Base):
     __tablename__ = "posts"
     id = Column(Integer, primary_key=True, index=True)

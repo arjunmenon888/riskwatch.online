@@ -15,3 +15,9 @@ export interface FetchStatus {
   message: string;
   is_complete: boolean;
 }
+
+export interface NewsSource {
+  id: number;
+  name: string;
+  url: string;
+}

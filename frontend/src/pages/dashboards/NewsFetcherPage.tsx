@@ -1,5 +1,5 @@
 // filepath: frontend/src/pages/dashboards/NewsFetcherPage.tsx
-import React, { useState, useRef, useEffect, type FormEvent } from 'react';
+import React, { useState, useRef, useEffect, type FormEvent, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -13,14 +13,16 @@ import {
   ListItemText,
   LinearProgress,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { type FetchStatus } from '../../types/news.ts';
+import { type FetchStatus, type NewsSource } from '../../types/news.ts';
+import apiClient from '../../api/apiClient.ts';
 
 const NewsFetcherPage: React.FC = () => {
-  const [limit, setLimit] = useState<number>(10);
-  const [customSite, setCustomSite] = useState<string>('');
-  const [siteList, setSiteList] = useState<string[]>([]);
+  const [newSourceUrl, setNewSourceUrl] = useState<string>('');
+  const [sources, setSources] = useState<NewsSource[]>([]);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
   const [status, setStatus] = useState<FetchStatus>({
     stage: 'Idle',
     progress: 0,
@@ -37,19 +39,46 @@ const NewsFetcherPage: React.FC = () => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  const addSite = () => {
-    if (customSite && !siteList.includes(customSite)) {
-      setSiteList([...siteList, customSite]);
-      setCustomSite('');
+  const fetchSources = useCallback(async () => {
+    setSourcesLoading(true);
+    try {
+      const response = await apiClient.get<NewsSource[]>('/news-sources');
+      setSources(response.data);
+    } catch (error) {
+      alert('Failed to load news sources.');
+    } finally {
+      setSourcesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSources();
+  }, [fetchSources]);
+
+  const handleAddSource = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newSourceUrl.trim()) return;
+    try {
+      await apiClient.post('/news-sources', { url: newSourceUrl });
+      setNewSourceUrl('');
+      fetchSources(); // Refresh list after adding
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to add source.');
     }
   };
 
-  const removeSite = (siteToRemove: string) => {
-    setSiteList(siteList.filter((site) => site !== siteToRemove));
+  const handleDeleteSource = async (sourceId: number) => {
+    if (window.confirm('Are you sure you want to delete this source?')) {
+      try {
+        await apiClient.delete(`/news-sources/${sourceId}`);
+        setSources((prev) => prev.filter((s) => s.id !== sourceId));
+      } catch (err) {
+        alert('Failed to delete source.');
+      }
+    }
   };
 
-  const handleStartFetch = (e: FormEvent) => {
-    e.preventDefault();
+  const handleStartFetch = () => {
     if (isFetching) return;
 
     const token = localStorage.getItem('accessToken');
@@ -69,9 +98,7 @@ const NewsFetcherPage: React.FC = () => {
     ws.current.onopen = () => {
       setLogs((prev) => [...prev, 'Connection established. Authenticating...']);
       ws.current?.send(token);
-      
-      setLogs((prev) => [...prev, 'Sending fetch command...']);
-      ws.current?.send(JSON.stringify({ limit, custom_sites: siteList }));
+      // No command body is sent anymore; the backend knows to use the saved list.
     };
 
     ws.current.onmessage = (event) => {
@@ -103,57 +130,38 @@ const NewsFetcherPage: React.FC = () => {
     };
   };
 
-  const handleLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Prevent NaN by defaulting to 1 if the field is cleared
-    const numValue = value === '' ? 1 : parseInt(value, 10);
-    setLimit(numValue);
-  };
-
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" gutterBottom>News Fetcher</Typography>
       <Paper sx={{ p: 3 }}>
-        <Box component="form" onSubmit={handleStartFetch}>
-          <Typography variant="h6">Configuration</Typography>
+        <Typography variant="h6">Manage News Sources</Typography>
+        <Box component="form" onSubmit={handleAddSource} sx={{ display: 'flex', gap: 1, alignItems: 'center', my: 2 }}>
           <TextField
-            label="Max Articles to Fetch"
-            type="number"
-            value={limit}
-            onChange={handleLimitChange}
+            label="Add New Source URL (RSS or HTML)"
+            value={newSourceUrl}
+            onChange={(e) => setNewSourceUrl(e.target.value)}
             fullWidth
-            margin="normal"
+            size="small"
             disabled={isFetching}
-            InputProps={{ inputProps: { min: 1, max: 100 } }}
           />
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <TextField
-              label="Add Custom Site (RSS or HTML)"
-              value={customSite}
-              onChange={(e) => setCustomSite(e.target.value)}
-              fullWidth
-              margin="normal"
-              disabled={isFetching}
-            />
-            <Button onClick={addSite} variant="outlined" disabled={isFetching || !customSite}>Add</Button>
-          </Box>
-          {siteList.length > 0 && (
-            <List dense>
-              {siteList.map((site) => (
-                <ListItem key={site} secondaryAction={
-                  <IconButton edge="end" onClick={() => removeSite(site)} disabled={isFetching}>
-                    <DeleteIcon />
-                  </IconButton>
-                }>
-                  <ListItemText primary={site} />
-                </ListItem>
-              ))}
-            </List>
-          )}
-          <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }} disabled={isFetching}>
-            {isFetching ? 'Fetching...' : 'Start Fetch'}
-          </Button>
+          <Button type="submit" variant="outlined" disabled={isFetching || !newSourceUrl.trim()}>Add</Button>
         </Box>
+        {sourcesLoading ? <CircularProgress size={24} /> : (
+          <List dense>
+            {sources.map((source) => (
+              <ListItem key={source.id} secondaryAction={
+                <IconButton edge="end" onClick={() => handleDeleteSource(source.id)} disabled={isFetching}>
+                  <DeleteIcon />
+                </IconButton>
+              }>
+                <ListItemText primary={source.name} secondary={source.url} />
+              </ListItem>
+            ))}
+          </List>
+        )}
+        <Button onClick={handleStartFetch} variant="contained" color="primary" sx={{ mt: 2 }} disabled={isFetching || sources.length === 0}>
+          {isFetching ? 'Fetching...' : 'Fetch Latest News (1 per source)'}
+        </Button>
       </Paper>
 
       <Paper sx={{ p: 3, mt: 3 }}>
