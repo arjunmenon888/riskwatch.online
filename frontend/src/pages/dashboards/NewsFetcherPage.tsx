@@ -87,9 +87,7 @@ const NewsFetcherPage: React.FC = () => {
       return;
     }
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const backendHost = import.meta.env.VITE_API_BASE_WS ?? window.location.hostname;
-    const wsUrl = `${wsProtocol}//${backendHost}/api/v1/superadmin/fetch-news`;
+    const wsUrl = `${import.meta.env.VITE_API_BASE_WS}/api/v1/superadmin/fetch-news`;
 
     ws.current = new WebSocket(wsUrl);
     setIsFetching(true);
