@@ -14,8 +14,6 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     INVITE_TOKEN_EXPIRE_HOURS: int = 24
-    FIRST_SUPERADMIN_EMAIL: str
-    FIRST_SUPERADMIN_PASSWORD: str
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     PEXELS_API_KEY: str = os.getenv("PEXELS_API_KEY", "")
     

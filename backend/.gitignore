@@ -67,3 +67,6 @@ venv.bak
 
 # Docker
 docker-compose.yml.override
+
+#scripts
+create_superadmin.py
