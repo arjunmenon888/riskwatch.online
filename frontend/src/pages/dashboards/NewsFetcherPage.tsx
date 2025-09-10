@@ -57,13 +57,29 @@ const NewsFetcherPage: React.FC = () => {
 
   const handleAddSource = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newSourceUrl.trim()) return;
+    const trimmedUrl = newSourceUrl.trim();
+    if (!trimmedUrl) return;
+
+    // --- FIX: Ensure the URL has a protocol scheme before sending ---
+    let fullUrl = trimmedUrl;
+    if (!/^https?:\/\//i.test(fullUrl)) {
+      fullUrl = 'https://' + fullUrl;
+    }
+    // --- END OF FIX ---
+
     try {
-      await apiClient.post('/news-sources', { url: newSourceUrl });
+      // Use the corrected, full URL in the request payload
+      await apiClient.post('/news-sources', { url: fullUrl });
       setNewSourceUrl('');
       fetchSources(); // Refresh list after adding
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to add source.');
+      // Improved error message for better user feedback
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string' && detail.includes('URL scheme not permitted')) {
+        alert('Invalid URL. Please provide a full and valid URL, e.g., "https://example.com"');
+      } else {
+        alert(detail || 'Failed to add source.');
+      }
     }
   };
 
@@ -87,6 +103,8 @@ const NewsFetcherPage: React.FC = () => {
       return;
     }
 
+    // Directly use the environment variable. This is simpler and less error-prone.
+    // Ensure VITE_API_BASE_WS is set to the full wss://... URL in Railway.
     const wsUrl = `${import.meta.env.VITE_API_BASE_WS}/api/v1/superadmin/fetch-news`;
 
     ws.current = new WebSocket(wsUrl);
@@ -97,7 +115,6 @@ const NewsFetcherPage: React.FC = () => {
     ws.current.onopen = () => {
       setLogs((prev) => [...prev, 'Connection established. Authenticating...']);
       ws.current?.send(token);
-      // No command body is sent anymore; the backend knows to use the saved list.
     };
 
     ws.current.onmessage = (event) => {
