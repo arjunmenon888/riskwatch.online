@@ -29,8 +29,7 @@ import TrainingBuilderPage from './pages/superadmin/TrainingBuilderPage.tsx';
 import MyTrainingsPage from './pages/superadmin/MyTrainingsPage.tsx';
 import TrainingDashboardPage from './pages/TrainingDashboardPage.tsx';
 
-// --- NEW: Operations Hub Imports ---
-import OperationsHubLayout from './layouts/OperationsHubLayout.tsx';
+// --- Operations Hub Imports (flattened, no layout) ---
 import OperationsHubDashboard from './pages/operations/OperationsHubDashboard.tsx';
 import IncidentsPage from './pages/operations/IncidentsPage.tsx';
 import WorkOrdersPage from './pages/operations/WorkOrdersPage.tsx';
@@ -55,7 +54,7 @@ function App() {
           <Navbar />
           <Routes>
             {/* ======================================== */}
-            {/* Public Routes                          */}
+            {/* Public Routes                            */}
             {/* ======================================== */}
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/register" element={<RegisterPage />} />
@@ -63,7 +62,7 @@ function App() {
             <Route path="/news/:postId" element={<NewsDetailPage />} />
 
             {/* ======================================== */}
-            {/* Common Protected Routes                */}
+            {/* Common Protected Routes                   */}
             {/* ======================================== */}
             <Route
               path="/home"
@@ -83,7 +82,7 @@ function App() {
             />
 
             {/* ======================================== */}
-            {/* Superadmin Routes                      */}
+            {/* Superadmin Routes                         */}
             {/* ======================================== */}
             <Route
               path="/superadmin"
@@ -127,7 +126,7 @@ function App() {
             />
 
             {/* ======================================== */}
-            {/* Admin Routes                           */}
+            {/* Admin Routes                              */}
             {/* ======================================== */}
             <Route
               path="/admin"
@@ -137,32 +136,93 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
+
             {/* ======================================== */}
-            {/* NEW: Operations Hub Routes             */}
+            {/* Operations Hub (Flattened, no layout)     */}
             {/* ======================================== */}
             <Route
               path="/operations-hub"
               element={
                 <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
-                  <OperationsHubLayout />
+                  <OperationsHubDashboard />
                 </ProtectedRoute>
               }
-            >
-              <Route index element={<OperationsHubDashboard />} />
-              <Route path="incidents" element={<IncidentsPage />} />
-              <Route path="work-orders" element={<WorkOrdersPage />} />
-              <Route path="assets" element={<AssetsPage />} />
-              <Route path="inspections" element={<InspectionsPage />} />
-              <Route path="ptw" element={<PtwPage />} />
-              <Route path="moc" element={<MocPage />} />
-              <Route path="investigations" element={<InvestigationsPage />} />
-              <Route path="audits" element={<AuditsPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
-            </Route>
+            />
+            <Route
+              path="/operations-hub/incidents"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <IncidentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/work-orders"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <WorkOrdersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/assets"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <AssetsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/inspections"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <InspectionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/ptw"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <PtwPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/moc"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <MocPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/investigations"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <InvestigationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/audits"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <AuditsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-hub/analytics"
+              element={
+                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* ======================================== */}
-            {/* Utility & Fallback Routes              */}
+            {/* Utility & Fallback Routes                 */}
             {/* ======================================== */}
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/" element={<Navigate to="/home" />} />
