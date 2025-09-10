@@ -60,12 +60,12 @@ const NewsFetcherPage: React.FC = () => {
     const trimmedUrl = newSourceUrl.trim();
     if (!trimmedUrl) return;
 
-    // --- FIX: Ensure the URL has a protocol scheme before sending ---
+    // Ensure the URL has a protocol scheme (http:// or https://)
+    // before sending it to the backend to satisfy Pydantic's HttpUrl validation.
     let fullUrl = trimmedUrl;
     if (!/^https?:\/\//i.test(fullUrl)) {
       fullUrl = 'https://' + fullUrl;
     }
-    // --- END OF FIX ---
 
     try {
       // Use the corrected, full URL in the request payload
@@ -97,15 +97,25 @@ const NewsFetcherPage: React.FC = () => {
   const handleStartFetch = () => {
     if (isFetching) return;
 
+    // --- FIX & HARDENING: Validate the environment variable before use ---
+    const baseWsUrl = import.meta.env.VITE_API_BASE_WS;
+
+    if (!baseWsUrl || baseWsUrl.includes('undefined')) {
+      const errorMessage = 'Configuration Error: VITE_API_BASE_WS is not defined in the environment. Cannot connect to WebSocket.';
+      console.error(errorMessage);
+      setLogs([errorMessage]);
+      setStatus({ stage: 'Error', progress: 0, message: errorMessage, is_complete: true });
+      return; // Stop execution
+    }
+    // --- END OF FIX & HARDENING ---
+
     const token = localStorage.getItem('accessToken');
     if (!token) {
       setLogs(['Authentication token not found. Please log in again.']);
       return;
     }
 
-    // Directly use the environment variable. This is simpler and less error-prone.
-    // Ensure VITE_API_BASE_WS is set to the full wss://... URL in Railway.
-    const wsUrl = `${import.meta.env.VITE_API_BASE_WS}/api/v1/superadmin/fetch-news`;
+    const wsUrl = `${baseWsUrl}/api/v1/superadmin/fetch-news`;
 
     ws.current = new WebSocket(wsUrl);
     setIsFetching(true);
