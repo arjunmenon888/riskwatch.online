@@ -1,4 +1,3 @@
-// filepath: frontend/src/pages/dashboards/NewsFetcherPage.tsx
 import React, { useState, useRef, useEffect, type FormEvent, useCallback } from 'react';
 import {
   Container,
@@ -94,11 +93,51 @@ const NewsFetcherPage: React.FC = () => {
     }
   };
 
+  /**
+   * Resolve WS base URL from env or derive it safely at runtime.
+   * Priority:
+   * 1) VITE_API_BASE_WS
+   * 2) Derived from VITE_API_BASE_URL (switch https->wss, strip path)
+   * 3) Same-origin fallback
+   */
+  const resolveWsBase = () => {
+    const envWs = import.meta.env.VITE_API_BASE_WS as string | undefined;
+    if (envWs && !String(envWs).includes('undefined')) return String(envWs).replace(/\/$/, '');
+
+    const envHttp = import.meta.env.VITE_API_BASE_URL as string | undefined;
+    if (envHttp && !String(envHttp).includes('undefined')) {
+      try {
+        const u = new URL(envHttp);
+        // Convert protocol
+        u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+        // Drop any path like /api/v1 to keep just the origin
+        u.pathname = '';
+        u.search = '';
+        u.hash = '';
+        return u.toString().replace(/\/$/, '');
+      } catch {
+        // ignore and try same-origin
+      }
+    }
+
+    // Same-origin fallback
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${location.host}`;
+  };
+
   const handleStartFetch = () => {
     if (isFetching) return;
 
-    // --- FIX & HARDENING: Validate the environment variable before use ---
-    const baseWsUrl = import.meta.env.VITE_API_BASE_WS;
+    // If there's an existing socket, close it before creating a new one
+    if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) {
+      try { ws.current.close(); } catch {}
+    }
+
+    // Resolve base URL with fallbacks + quick one-time sanity logs
+    const baseWsUrl = resolveWsBase();
+    console.log('VITE_API_BASE_WS:', import.meta.env.VITE_API_BASE_WS);
+    console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+    console.log('Resolved WS Base URL:', baseWsUrl);
 
     if (!baseWsUrl || baseWsUrl.includes('undefined')) {
       const errorMessage = 'Configuration Error: VITE_API_BASE_WS is not defined in the environment. Cannot connect to WebSocket.';
@@ -107,7 +146,6 @@ const NewsFetcherPage: React.FC = () => {
       setStatus({ stage: 'Error', progress: 0, message: errorMessage, is_complete: true });
       return; // Stop execution
     }
-    // --- END OF FIX & HARDENING ---
 
     const token = localStorage.getItem('accessToken');
     if (!token) {
@@ -138,7 +176,7 @@ const NewsFetcherPage: React.FC = () => {
           ws.current?.close();
         }
       } catch (err) {
-        console.error("Failed to parse WebSocket message:", event.data, err);
+        console.error('Failed to parse WebSocket message:', event.data, err);
         setLogs((prev) => [...prev, `[CLIENT ERROR] Received invalid message from server.`]);
       }
     };
