@@ -9,29 +9,65 @@ import {
   CardContent,
   Box,
   Chip,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { hubFeatures } from '../../config/operationsHubConfig';
 
 const OperationsHubDashboard: React.FC = () => {
   const navigate = useNavigate();
 
-  return (
+  // Responsive: show "right-side cards" on desktop, "left-side list" on mobile
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // --- Mobile (left-side style) ---
+  const MobileLeftList = () => (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Operations Hub
+      </Typography>
+
+      <List sx={{ bgcolor: 'background.paper', borderRadius: 2, overflow: 'hidden' }}>
+        {hubFeatures.map((feature, idx) => (
+          <React.Fragment key={feature.title}>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => navigate(feature.path)}>
+                <ListItemIcon sx={{ minWidth: 40 }}>{feature.icon}</ListItemIcon>
+                <ListItemText
+                  primary={feature.title}
+                  secondary={feature.description}
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+                <Chip size="small" color="secondary" label="0" />
+              </ListItemButton>
+            </ListItem>
+            {idx < hubFeatures.length - 1 && <Divider component="li" />}
+          </React.Fragment>
+        ))}
+      </List>
+    </Box>
+  );
+
+  // --- Desktop (right-side cards) ---
+  const DesktopRightCards = () => (
     <Box>
       <Typography variant="h4" gutterBottom>
         Operations Hub
       </Typography>
+
       <Grid container spacing={3}>
         {hubFeatures.map((feature) => (
-          // --- THIS IS THE FIX ---
-          // The 'item' prop is no longer used in MUI v5+.
-          // The presence of breakpoint props like 'xs', 'sm', 'md'
-          // automatically makes the Grid component a grid item.
+          // In MUI v5+, providing xs/sm/md makes this a Grid item automatically
           <Grid xs={12} sm={6} md={4} key={feature.title}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardActionArea
-                onClick={() => navigate(feature.path)}
-                sx={{ flexGrow: 1, p: 2 }}
-              >
+              <CardActionArea onClick={() => navigate(feature.path)} sx={{ flexGrow: 1, p: 2 }}>
                 <CardContent>
                   <Box
                     sx={{
@@ -58,6 +94,8 @@ const OperationsHubDashboard: React.FC = () => {
       </Grid>
     </Box>
   );
+
+  return isMobile ? <MobileLeftList /> : <DesktopRightCards />;
 };
 
 export default OperationsHubDashboard;
